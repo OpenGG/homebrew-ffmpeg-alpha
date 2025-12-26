@@ -1,0 +1,74 @@
+name: Auto-Sync & Build FFmpeg Alpha
+
+on:
+  workflow_dispatch: # 允许手动触发
+  schedule:
+    - cron: '0 0 * * 1' # 每周一自动运行
+
+jobs:
+  build-and-publish:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      # 1. 抓取官方最新配方
+      - name: Fetch Upstream Formulas
+        run: |
+          mkdir -p Formula
+          brew update
+          brew cat x265 > Formula/x265-alpha.rb
+          brew cat ffmpeg > Formula/ffmpeg-alpha.rb
+
+      # 2. 运行魔改脚本
+      - name: Apply Patches
+        run: ruby scripts/patch_formulas.rb
+
+      # 3. 编译 x265-alpha (静态库)
+      - name: Build x265-alpha
+        run: brew install --build-from-source ./Formula/x265-alpha.rb
+
+      # 4. 编译 FFmpeg Bottle
+      - name: Build FFmpeg Bottle
+        run: |
+          # 卸载冲突包
+          brew unlink x265 || true
+          
+          # 编译并打包
+          brew install --build-bottle ./Formula/ffmpeg-alpha.rb
+          
+          # 生成 Bottle 文件，指定 Release URL 模板
+          # 注意：这里的 URL 对应下面的 Release 名字 "auto-build"
+          brew bottle ./Formula/ffmpeg-alpha.rb --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
+          
+          # 记录文件名
+          echo "BOTTLE_NAME=$(ls *.bottle.tar.gz)" >> $GITHUB_ENV
+
+      # 5. 更新 Formula 里的 SHA256 并提交
+      - name: Push Updated Formula
+        run: |
+          # 合并 SHA256 到文件
+          brew bottle --merge --write --no-commit ./Formula/ffmpeg-alpha.rb
+          
+          # 提交代码
+          git config user.name "Auto Builder"
+          git config user.email "actions@github.com"
+          git add Formula/*.rb
+          git commit -m "Auto-update: Sync upstream and rebuild bottle" || echo "No changes"
+          git push
+
+      # 6. 上传二进制包到 Release
+      - name: Upload Binary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create auto-build ${{ env.BOTTLE_NAME }} \
+            --title "Auto Build Artifacts" \
+            --notes "Automated build from upstream" \
+            --repo ${{ github.repository }} \
+            --clobber
