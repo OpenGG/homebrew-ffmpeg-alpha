@@ -9,10 +9,14 @@ jobs:
   build-and-publish:
     runs-on: macos-latest
     permissions:
+      # 关键：赋予 GITHUB_TOKEN 写权限，否则 Action 无法推送
       contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 必须获取完整的 git 历史，否则 auto-commit 可能会报错
+          ref: ${{ github.head_ref }}
 
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
@@ -33,33 +37,33 @@ jobs:
       - name: Apply Patches
         run: ruby scripts/patch_formulas.rb
 
-      # 阶段 1: 编译并打包 x265-alpha
+      # 阶段 1: 编译 x265
       - name: Build x265-alpha Bottle
         run: |
           brew install --build-bottle x265-alpha
           brew bottle x265-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # 阶段 2: 编译并打包 ffmpeg-alpha
+      # 阶段 2: 编译 ffmpeg
       - name: Build FFmpeg-alpha Bottle
         run: |
           brew install --build-bottle ffmpeg-alpha
           brew bottle ffmpeg-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # 阶段 3: 合并 SHA256 并发布
-      - name: Push Updated Formulas
+      # 阶段 3: 合并 Bottle 信息 (这一步必须用命令，因为是 Homebrew 的逻辑)
+      - name: Merge Bottle Info
         run: |
-          echo "Merging bottle info..."
-          ls -lh *.json
-          
+          echo "Merging bottle info into Formula files..."
+          # 这步会修改本地的 Formula/*.rb 文件
           brew bottle --merge --write --no-commit *.json
-          
-          git config user.name "Auto Builder"
-          git config user.email "actions@github.com"
-          git add Formula/*.rb
-          git commit -m "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha" || echo "No changes"
-          
-          # === 修复点：显式指定推送到 origin main ===
-          git push origin main
+
+      # 阶段 4: 提交并推送 (使用 Action，替代手写 Git 命令)
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha"
+          file_pattern: 'Formula/*.rb' # 只提交 Formula 文件夹下的变化
+          branch: main
+          push_options: '--force'
 
       - name: Upload Artifacts
         env:
