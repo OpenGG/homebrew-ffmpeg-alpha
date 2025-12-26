@@ -15,18 +15,21 @@ def process_file(path)
         next
       end
       
+      # === 核心修复 1: 强制单线程编译 ===
+      # 解决 libtool 报错 "not an object file" 的竞态条件问题
+      if line.strip.start_with?("def install")
+        new_lines << line
+        new_lines << "    ENV.deparallelize\n"
+        next
+      end
+
       if line.strip.start_with?("args = %W[")
         new_lines << line
         new_lines << "    -DENABLE_ALPHA=ON\n"
         new_lines << "    -DENABLE_CLI=OFF\n"
-        
-        # === 核心修复：禁用 SVE/SVE2 ===
-        # 1. 解决 macOS arm64 不支持 SVE 的架构问题
-        # 2. 解决 libtool 概率性读取 .o 文件失败的竞态条件问题
+        # 保留之前的 SVE 禁用，以此防身
         new_lines << "    -DENABLE_SVE=OFF\n"
         new_lines << "    -DENABLE_SVE2=OFF\n"
-        # =============================
-        
         next
       end
     end
@@ -66,4 +69,4 @@ end
 
 process_file("Formula/x265-alpha.rb")
 process_file("Formula/ffmpeg-alpha.rb")
-puts "✅ SVE/SVE2 disabled for stability."
+puts "✅ Patches applied: ENV.deparallelize added to x265."
