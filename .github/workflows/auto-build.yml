@@ -17,6 +17,7 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      # 必须注册本地 Tap，否则 install 会报错
       - name: Register Local Tap
         run: |
           TAP_DIR="$(brew --repo)/Library/Taps/${{ github.repository }}"
@@ -38,10 +39,10 @@ jobs:
       # ====================================================
       - name: Build x265-alpha Bottle
         run: |
-          # 1. 编译并安装 x265-alpha
+          # 编译 x265-alpha (生成动态库)
           brew install --build-bottle x265-alpha
           
-          # 2. 打包
+          # 打包 (生成 .tar.gz 和 .json)
           brew bottle x265-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
       # ====================================================
@@ -49,9 +50,8 @@ jobs:
       # ====================================================
       - name: Build FFmpeg-alpha Bottle
         run: |
-          # Homebrew 现在已经安装了 x265-alpha (在上一步)
-          # 所以编译 ffmpeg 时会自动链接到它
-          
+          # 此时 x265-alpha 已经安装在系统里了
+          # ffmpeg 编译时会自动 link 到它
           brew install --build-bottle ffmpeg-alpha
           
           # 打包
@@ -62,7 +62,7 @@ jobs:
       # ====================================================
       - name: Push Updated Formulas
         run: |
-          # 将两个 bottle 的哈希值都写入对应的 rb 文件
+          # --merge 会自动读取当前目录下的 .json 文件并修改 .rb 文件
           brew bottle --merge --write --no-commit x265-alpha
           brew bottle --merge --write --no-commit ffmpeg-alpha
           
@@ -76,9 +76,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 上传当前目录下所有的 bottle 文件 (*.tar.gz)
+          # 上传所有的 bottle 文件
           gh release create auto-build *.bottle.tar.gz \
             --title "Auto Build Artifacts" \
-            --notes "Contains both x265-alpha and ffmpeg-alpha" \
+            --notes "Contains both x265-alpha and ffmpeg-alpha bottles" \
             --repo ${{ github.repository }} \
             --clobber
