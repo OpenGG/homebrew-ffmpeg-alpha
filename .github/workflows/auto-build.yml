@@ -48,13 +48,13 @@ jobs:
           brew install --build-bottle ffmpeg-alpha
           brew bottle ffmpeg-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # 阶段 3: 合并 Bottle 信息
+      # 阶段 3: 合并 Bottle 信息 (直接在当前目录修改)
       - name: Merge Bottle Info
         run: |
           echo "Merging bottle info into Formula files..."
           brew bottle --merge --write --no-commit *.json
 
-      # 修复 Git 权限
+      # 修复 Git 权限 (Token 注入)
       - name: Fix Git Auth
         run: |
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
@@ -69,16 +69,28 @@ jobs:
           push_options: '--force'
           skip_fetch: true
 
-      # 阶段 5: 上传
+      # 阶段 5: 处理文件名兼容性并上传
       - name: Upload Artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # === 关键逻辑：原地复制一份单横线版本 ===
+          # 为了解决 Homebrew 只能下载 name-version (单横线) 的 bug
+          for f in *--*.tar.gz; do
+            # 如果文件存在
+            [ -e "$f" ] || continue
+            # 复制为单横线版本: x265-alpha--4.1.tar.gz -> x265-alpha-4.1.tar.gz
+            cp "$f" "${f/--/-}"
+          done
+          
+          echo "Ready to upload:"
+          ls -lh *bottle*.tar.gz
+
+          # 清理旧 Release
           gh release delete auto-build --yes --cleanup-tag --repo ${{ github.repository }} || true
 
-          # === 核心修复 ===
-          # 原来的 *.bottle.tar.gz 匹配不到 ...bottle.3.tar.gz
-          # 改用 *bottle*.tar.gz (中间加个星号) 这里的匹配就万无一失了
+          # 上传所有 tar.gz (包含原来的和改名后的)
+          # 使用 *bottle*.tar.gz 通配符，确保能匹配带 Rebuild 编号的文件
           gh release create auto-build *bottle*.tar.gz \
             --title "Auto Build Artifacts" \
             --notes "Contains both x265-alpha and ffmpeg-alpha bottles. Built at $(date)" \
