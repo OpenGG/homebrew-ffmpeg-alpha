@@ -1,9 +1,9 @@
 name: Auto-Sync & Build FFmpeg Alpha
 
 on:
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 1' # 每周一自动运行
+    - cron: '0 0 * * 1'
 
 jobs:
   build-and-publish:
@@ -17,7 +17,23 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      # 1. 抓取官方最新配方
+      # ====================================================
+      # 新增步骤：将当前仓库注册为本地 Tap
+      # ====================================================
+      - name: Register Local Tap
+        run: |
+          # 获取当前仓库的 owner 和 repo 名称
+          # 例如: yourname/homebrew-ffmpeg-alpha
+          TAP_DIR="$(brew --repo)/Library/Taps/${{ github.repository }}"
+          
+          # 创建父目录
+          mkdir -p "$(dirname "$TAP_DIR")"
+          
+          # 创建软链接：把当前工作目录链接到 Homebrew 的 Taps 目录
+          ln -sfn "$PWD" "$TAP_DIR"
+          
+          echo "✅ Local tap registered at $TAP_DIR"
+
       - name: Fetch Upstream Formulas
         run: |
           mkdir -p Formula
@@ -25,44 +41,38 @@ jobs:
           brew cat x265 > Formula/x265-alpha.rb
           brew cat ffmpeg > Formula/ffmpeg-alpha.rb
 
-      # 2. 运行魔改脚本
       - name: Apply Patches
         run: ruby scripts/patch_formulas.rb
 
-      # 3. 编译 x265-alpha (静态库)
+      # ====================================================
+      # 修正：现在不需要用文件路径了，直接用名字安装
+      # ====================================================
       - name: Build x265-alpha
-        run: brew install --build-from-source ./Formula/x265-alpha.rb
+        run: brew install --build-from-source x265-alpha
 
-      # 4. 编译 FFmpeg Bottle
       - name: Build FFmpeg Bottle
         run: |
-          # 卸载冲突包
           brew unlink x265 || true
           
-          # 编译并打包
-          brew install --build-bottle ./Formula/ffmpeg-alpha.rb
+          # 注意：这里直接用配方名称 ffmpeg-alpha，不要带 ./Formula/ 前缀
+          brew install --build-bottle ffmpeg-alpha
           
-          # 生成 Bottle 文件，指定 Release URL 模板
-          # 注意：这里的 URL 对应下面的 Release 名字 "auto-build"
-          brew bottle ./Formula/ffmpeg-alpha.rb --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
+          # 打包
+          brew bottle ffmpeg-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
           
-          # 记录文件名
           echo "BOTTLE_NAME=$(ls *.bottle.tar.gz)" >> $GITHUB_ENV
 
-      # 5. 更新 Formula 里的 SHA256 并提交
       - name: Push Updated Formula
         run: |
-          # 合并 SHA256 到文件
-          brew bottle --merge --write --no-commit ./Formula/ffmpeg-alpha.rb
+          # 更新配方文件 (同样使用名字)
+          brew bottle --merge --write --no-commit ffmpeg-alpha
           
-          # 提交代码
           git config user.name "Auto Builder"
           git config user.email "actions@github.com"
           git add Formula/*.rb
           git commit -m "Auto-update: Sync upstream and rebuild bottle" || echo "No changes"
           git push
 
-      # 6. 上传二进制包到 Release
       - name: Upload Binary
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
