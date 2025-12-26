@@ -17,7 +17,6 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      # 必须注册本地 Tap，否则 install 会报错
       - name: Register Local Tap
         run: |
           TAP_DIR="$(brew --repo)/Library/Taps/${{ github.repository }}"
@@ -39,32 +38,30 @@ jobs:
       # ====================================================
       - name: Build x265-alpha Bottle
         run: |
-          # 编译 x265-alpha (生成动态库)
           brew install --build-bottle x265-alpha
-          
-          # 打包 (生成 .tar.gz 和 .json)
-          brew bottle x265-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
+          # --json 参数告诉 brew 生成 json 文件，方便后续 merge
+          brew bottle x265-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
       # ====================================================
       # 阶段 2: 编译并打包 ffmpeg-alpha
       # ====================================================
       - name: Build FFmpeg-alpha Bottle
         run: |
-          # 此时 x265-alpha 已经安装在系统里了
-          # ffmpeg 编译时会自动 link 到它
           brew install --build-bottle ffmpeg-alpha
-          
-          # 打包
-          brew bottle ffmpeg-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
+          brew bottle ffmpeg-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
       # ====================================================
       # 阶段 3: 合并 SHA256 并发布
       # ====================================================
       - name: Push Updated Formulas
         run: |
-          # --merge 会自动读取当前目录下的 .json 文件并修改 .rb 文件
-          brew bottle --merge --write --no-commit x265-alpha
-          brew bottle --merge --write --no-commit ffmpeg-alpha
+          # 核心修复：显式查找所有 .json 文件并合并
+          # 这里的 *.json 会匹配到 x265-alpha--xxx.json 和 ffmpeg-alpha--xxx.json
+          
+          echo "Merging bottle info..."
+          ls -lh *.json
+          
+          brew bottle --merge --write --no-commit *.json
           
           git config user.name "Auto Builder"
           git config user.email "actions@github.com"
@@ -76,7 +73,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 上传所有的 bottle 文件
           gh release create auto-build *.bottle.tar.gz \
             --title "Auto Build Artifacts" \
             --notes "Contains both x265-alpha and ffmpeg-alpha bottles" \
