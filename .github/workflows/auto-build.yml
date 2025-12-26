@@ -1,4 +1,4 @@
-name: Auto-Sync & Build FFmpeg Alpha
+name: Build Both x265 & FFmpeg
 
 on:
   workflow_dispatch:
@@ -17,22 +17,11 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      # ====================================================
-      # 新增步骤：将当前仓库注册为本地 Tap
-      # ====================================================
       - name: Register Local Tap
         run: |
-          # 获取当前仓库的 owner 和 repo 名称
-          # 例如: yourname/homebrew-ffmpeg-alpha
           TAP_DIR="$(brew --repo)/Library/Taps/${{ github.repository }}"
-          
-          # 创建父目录
           mkdir -p "$(dirname "$TAP_DIR")"
-          
-          # 创建软链接：把当前工作目录链接到 Homebrew 的 Taps 目录
           ln -sfn "$PWD" "$TAP_DIR"
-          
-          echo "✅ Local tap registered at $TAP_DIR"
 
       - name: Fetch Upstream Formulas
         run: |
@@ -45,40 +34,51 @@ jobs:
         run: ruby scripts/patch_formulas.rb
 
       # ====================================================
-      # 修正：现在不需要用文件路径了，直接用名字安装
+      # 阶段 1: 编译并打包 x265-alpha
       # ====================================================
-      - name: Build x265-alpha
-        run: brew install --build-from-source x265-alpha
-
-      - name: Build FFmpeg Bottle
+      - name: Build x265-alpha Bottle
         run: |
-          brew unlink x265 || true
+          # 1. 编译并安装 x265-alpha
+          brew install --build-bottle x265-alpha
           
-          # 注意：这里直接用配方名称 ffmpeg-alpha，不要带 ./Formula/ 前缀
+          # 2. 打包
+          brew bottle x265-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
+
+      # ====================================================
+      # 阶段 2: 编译并打包 ffmpeg-alpha
+      # ====================================================
+      - name: Build FFmpeg-alpha Bottle
+        run: |
+          # Homebrew 现在已经安装了 x265-alpha (在上一步)
+          # 所以编译 ffmpeg 时会自动链接到它
+          
           brew install --build-bottle ffmpeg-alpha
           
           # 打包
           brew bottle ffmpeg-alpha --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
-          
-          echo "BOTTLE_NAME=$(ls *.bottle.tar.gz)" >> $GITHUB_ENV
 
-      - name: Push Updated Formula
+      # ====================================================
+      # 阶段 3: 合并 SHA256 并发布
+      # ====================================================
+      - name: Push Updated Formulas
         run: |
-          # 更新配方文件 (同样使用名字)
+          # 将两个 bottle 的哈希值都写入对应的 rb 文件
+          brew bottle --merge --write --no-commit x265-alpha
           brew bottle --merge --write --no-commit ffmpeg-alpha
           
           git config user.name "Auto Builder"
           git config user.email "actions@github.com"
           git add Formula/*.rb
-          git commit -m "Auto-update: Sync upstream and rebuild bottle" || echo "No changes"
+          git commit -m "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha" || echo "No changes"
           git push
 
-      - name: Upload Binary
+      - name: Upload Artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create auto-build ${{ env.BOTTLE_NAME }} \
+          # 上传当前目录下所有的 bottle 文件 (*.tar.gz)
+          gh release create auto-build *.bottle.tar.gz \
             --title "Auto Build Artifacts" \
-            --notes "Automated build from upstream" \
+            --notes "Contains both x265-alpha and ffmpeg-alpha" \
             --repo ${{ github.repository }} \
             --clobber
