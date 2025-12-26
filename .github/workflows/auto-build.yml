@@ -77,8 +77,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 1. 先尝试删除旧的 Release 和 Tag (如果存在)
+          # || true 表示如果本来就不存在，也不要报错，继续往下跑
+          gh release delete auto-build --yes --cleanup-tag --repo ${{ github.repository }} || true
+
+          # 2. 创建全新的 Release 并上传文件
+          # 去掉了不支持的 --clobber
           gh release create auto-build *.bottle.tar.gz \
             --title "Auto Build Artifacts" \
-            --notes "Contains both x265-alpha and ffmpeg-alpha bottles" \
-            --repo ${{ github.repository }} \
-            --clobber
+            --notes "Contains both x265-alpha and ffmpeg-alpha bottles. Built at $(date)" \
+            --repo ${{ github.repository }}
