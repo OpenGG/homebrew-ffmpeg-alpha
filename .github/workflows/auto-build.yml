@@ -9,14 +9,15 @@ jobs:
   build-and-publish:
     runs-on: macos-latest
     permissions:
-      # 关键：赋予 GITHUB_TOKEN 写权限，否则 Action 无法推送
-      contents: write
+      contents: write # 必须有写权限
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # 必须获取完整的 git 历史，否则 auto-commit 可能会报错
-          ref: ${{ github.head_ref }}
+          # === 关键修复点 1 ===
+          # 不要指定 ref，让它默认 checkout 触发的分支 (main)
+          # 指定 fetch-depth: 0 以获取完整历史，避免 push 报错
+          fetch-depth: 0
 
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
@@ -49,21 +50,24 @@ jobs:
           brew install --build-bottle ffmpeg-alpha
           brew bottle ffmpeg-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # 阶段 3: 合并 Bottle 信息 (这一步必须用命令，因为是 Homebrew 的逻辑)
+      # 阶段 3: 合并 Bottle 信息
       - name: Merge Bottle Info
         run: |
           echo "Merging bottle info into Formula files..."
-          # 这步会修改本地的 Formula/*.rb 文件
+          # 注意：这里我们使用 --no-commit，只修改文件，把提交工作交给下面的 Action
           brew bottle --merge --write --no-commit *.json
 
-      # 阶段 4: 提交并推送 (使用 Action，替代手写 Git 命令)
+      # 阶段 4: 提交并推送 (使用 Action)
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha"
-          file_pattern: 'Formula/*.rb' # 只提交 Formula 文件夹下的变化
+          file_pattern: 'Formula/*.rb'
           branch: main
+          # === 关键修复点 2 ===
+          # 确保 Action 知道要推送到 origin
           push_options: '--force'
+          skip_fetch: true
 
       - name: Upload Artifacts
         env:
