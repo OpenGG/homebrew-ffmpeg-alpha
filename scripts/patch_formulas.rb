@@ -7,7 +7,7 @@ def process_file(path)
   
   lines.each do |line|
     # =======================================================
-    # 1. 修改 x265: 开启 Alpha，标准动态库
+    # 1. 修改 x265
     # =======================================================
     if path.include?("x265")
       if line.include?("class X265 < Formula")
@@ -15,20 +15,24 @@ def process_file(path)
         next
       end
       
-      # 注意：原 x265 可能有 keg_only，我们这里如果遇到要删掉
-      # 但最简单的办法是：只要不主动添加 keg_only，它就是标准库
-      
       if line.strip.start_with?("args = %W[")
         new_lines << line
         new_lines << "    -DENABLE_ALPHA=ON\n"
-        # 移除了 -DENABLE_SHARED=OFF，默认编译为动态库(.dylib)
         new_lines << "    -DENABLE_CLI=OFF\n"
+        
+        # === 核心修复：禁用 SVE/SVE2 ===
+        # 1. 解决 macOS arm64 不支持 SVE 的架构问题
+        # 2. 解决 libtool 概率性读取 .o 文件失败的竞态条件问题
+        new_lines << "    -DENABLE_SVE=OFF\n"
+        new_lines << "    -DENABLE_SVE2=OFF\n"
+        # =============================
+        
         next
       end
     end
 
     # =======================================================
-    # 2. 修改 FFmpeg: 依赖 x265-alpha
+    # 2. 修改 FFmpeg
     # =======================================================
     if path.include?("ffmpeg")
       if line.include?("class Ffmpeg < Formula")
@@ -36,13 +40,11 @@ def process_file(path)
         next
       end
 
-      # 修改依赖：将 "x265" 替换为 "x265-alpha" (普通依赖，非 :build)
       if line.include?('depends_on "x265"')
         new_lines << line.sub('"x265"', '"x265-alpha"')
         next
       end
 
-      # 注入配置：仅开启开关，Homebrew 会自动处理链接
       if line.strip.start_with?('system "./configure"')
         puts "  -> Enabling libx265..."
         new_lines << <<~EOS
@@ -64,4 +66,4 @@ end
 
 process_file("Formula/x265-alpha.rb")
 process_file("Formula/ffmpeg-alpha.rb")
-puts "✅ Standard dynamic linking patches applied."
+puts "✅ SVE/SVE2 disabled for stability."
