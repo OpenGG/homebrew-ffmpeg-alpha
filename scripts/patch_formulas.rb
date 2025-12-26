@@ -6,7 +6,6 @@ def patch_x265
   content = File.read(path)
   content.gsub!("class X265 < Formula", "class X265Alpha < Formula")
   
-  # 确保它是静态编译的 (keg_only 避免链接干扰)
   if content.include?('def install')
     content.sub!('def install', "keg_only \"x265-alpha is build-only\"\n  def install")
   end
@@ -34,17 +33,18 @@ def patch_ffmpeg
   
   content = File.read(path)
   content.gsub!("class Ffmpeg < Formula", "class FfmpegAlpha < Formula")
-  
-  # === 核心修改：将 x265 改为 Build-time 依赖 ===
-  # 这样用户安装 Bottle 时，Homebrew 就不会去尝试安装 x265-alpha 了！
   content.gsub!('depends_on "x265"', 'depends_on "x265-alpha" => :build')
+  
+  # === 修复重点 ===
+  # 我们现在查找完整的一行： 'system "./configure", *args'
+  # 并用包含这一行完整代码的块去替换它
+  target_line = 'system "./configure", *args'
   
   patch_logic = <<~EOS
     # === [AUTO-PATCH] Static Link Logic ===
     args << "--enable-libx265"
     args << "--pkg-config-flags=--static"
     
-    # 只有在编译环境下（有 x265-alpha）才注入路径
     if Formula["x265-alpha"].any_version_installed?
       x265_path = Formula["x265-alpha"].opt_prefix
       args << "--extra-cflags=-I\#{x265_path}/include"
@@ -52,11 +52,13 @@ def patch_ffmpeg
     end
     # === [END PATCH] ===
 
-    system "./configure"
+    system "./configure", *args
   EOS
   
-  unless content.include?("[AUTO-PATCH]")
-    content.sub!('system "./configure"', patch_logic)
+  if content.include?(target_line) && !content.include?("[AUTO-PATCH]")
+    content.sub!(target_line, patch_logic)
+  else
+    puts "Warning: Could not find exact configure line or patch already applied."
   end
   
   File.write(path, content)
