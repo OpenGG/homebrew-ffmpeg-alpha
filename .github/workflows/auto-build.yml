@@ -9,14 +9,14 @@ jobs:
   build-and-publish:
     runs-on: macos-latest
     permissions:
-      contents: write # 必须有写权限
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # === 关键修复点 1 ===
-          # 不要指定 ref，让它默认 checkout 触发的分支 (main)
-          # 指定 fetch-depth: 0 以获取完整历史，避免 push 报错
+          # === 修正 1: 必须显式指定 main 分支 ===
+          # 否则就是分离头指针(Detached HEAD)，导致无法 Push
+          ref: main
           fetch-depth: 0
 
       - name: Set up Homebrew
@@ -54,8 +54,14 @@ jobs:
       - name: Merge Bottle Info
         run: |
           echo "Merging bottle info into Formula files..."
-          # 注意：这里我们使用 --no-commit，只修改文件，把提交工作交给下面的 Action
           brew bottle --merge --write --no-commit *.json
+
+      # === 修正 2: 强制修复 Git 权限 (Magic Fix) ===
+      # 在 Action 运行前，手动将 Token 注入 URL。
+      # 这是唯一能 100% 解决 macOS "Device not configured" 的办法。
+      - name: Fix Git Auth
+        run: |
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
 
       # 阶段 4: 提交并推送 (使用 Action)
       - name: Commit and Push Changes
@@ -64,8 +70,6 @@ jobs:
           commit_message: "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha"
           file_pattern: 'Formula/*.rb'
           branch: main
-          # === 关键修复点 2 ===
-          # 确保 Action 知道要推送到 origin
           push_options: '--force'
           skip_fetch: true
 
