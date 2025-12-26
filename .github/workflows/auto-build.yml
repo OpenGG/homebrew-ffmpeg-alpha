@@ -33,31 +33,21 @@ jobs:
       - name: Apply Patches
         run: ruby scripts/patch_formulas.rb
 
-      # ====================================================
       # 阶段 1: 编译并打包 x265-alpha
-      # ====================================================
       - name: Build x265-alpha Bottle
         run: |
           brew install --build-bottle x265-alpha
-          # --json 参数告诉 brew 生成 json 文件，方便后续 merge
           brew bottle x265-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # ====================================================
       # 阶段 2: 编译并打包 ffmpeg-alpha
-      # ====================================================
       - name: Build FFmpeg-alpha Bottle
         run: |
           brew install --build-bottle ffmpeg-alpha
           brew bottle ffmpeg-alpha --json --root-url="https://github.com/${{ github.repository }}/releases/download/auto-build"
 
-      # ====================================================
       # 阶段 3: 合并 SHA256 并发布
-      # ====================================================
       - name: Push Updated Formulas
         run: |
-          # 核心修复：显式查找所有 .json 文件并合并
-          # 这里的 *.json 会匹配到 x265-alpha--xxx.json 和 ffmpeg-alpha--xxx.json
-          
           echo "Merging bottle info..."
           ls -lh *.json
           
@@ -67,7 +57,9 @@ jobs:
           git config user.email "actions@github.com"
           git add Formula/*.rb
           git commit -m "Auto-update: Publish new bottles for x265-alpha and ffmpeg-alpha" || echo "No changes"
-          git push
+          
+          # === 修复点：显式指定推送到 origin main ===
+          git push origin main
 
       - name: Upload Artifacts
         env:
