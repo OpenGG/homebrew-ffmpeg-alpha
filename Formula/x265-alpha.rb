@@ -8,8 +8,8 @@ class X265Alpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 3
-    sha256 cellar: :any, arm64_sequoia: "569f66e0a06da2cd90b09b29b2bf42864645c860781864fcae8d204ad14b1825"
+    rebuild 4
+    sha256 cellar: :any, arm64_sequoia: "f8b5f63cdb07c8664959578582488e07bb3e1133fea7f41ea47ab45ea307126b"
   end
 
   depends_on "cmake" => :build
@@ -29,6 +29,7 @@ class X265Alpha < Formula
   end
 
   def install
+    ENV.deparallelize
     ENV.runtime_cpu_detection
     # Build based off the script at ./build/linux/multilib.sh
     args = %W[
