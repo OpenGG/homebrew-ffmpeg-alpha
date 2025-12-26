@@ -1,4 +1,4 @@
-name: Build & Debug (Forensics)
+name: Build Both x265 & FFmpeg
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     - cron: '0 0 * * 1'
 
 jobs:
-  build-and-debug:
+  build-and-publish:
     runs-on: macos-latest
     permissions:
       contents: write
@@ -54,29 +54,12 @@ jobs:
           echo "Merging bottle info into Formula files..."
           brew bottle --merge --write --no-commit *.json
 
-      # ========================================================
-      # 🕵️‍♂️ 取证环节 1：提交代码前
-      # ========================================================
-      - name: 🔍 [FORENSICS] Check Files BEFORE Git Action
-        run: |
-          echo "=========================================="
-          echo "📍 Current Directory: $(pwd)"
-          echo "=========================================="
-          
-          echo "📂 Execute: ls -lah"
-          ls -lah
-          
-          echo "=========================================="
-          echo "🔎 Execute: find . -iname '*.bottle.tar.gz'"
-          find . -iname '*.bottle.tar.gz'
-          echo "=========================================="
-
-      # 修复 Git 权限 (必须保留，否则无法进行下一步测试)
+      # 修复 Git 权限
       - name: Fix Git Auth
         run: |
           git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
 
-      # 阶段 4: 执行那个嫌疑很大的 Git Action
+      # 阶段 4: 提交并推送
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
@@ -86,43 +69,17 @@ jobs:
           push_options: '--force'
           skip_fetch: true
 
-      # ========================================================
-      # 🕵️‍♂️ 取证环节 2：提交代码后
-      # ========================================================
-      - name: 🔍 [FORENSICS] Check Files AFTER Git Action
-        if: always() # 即使上面步骤失败也要运行
-        run: |
-          echo "=========================================="
-          echo "📍 Current Directory: $(pwd)"
-          echo "=========================================="
-          
-          echo "📂 Execute: ls -lah"
-          ls -lah
-          
-          echo "=========================================="
-          echo "🔎 Execute: find . -iname '*.bottle.tar.gz'"
-          find . -iname '*.bottle.tar.gz'
-          echo "=========================================="
-
-      # 尝试上传 (如果 find 能找到文件)
+      # 阶段 5: 上传
       - name: Upload Artifacts
-        if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 尝试删除旧 Release
           gh release delete auto-build --yes --cleanup-tag --repo ${{ github.repository }} || true
 
-          # 使用 find 命令的结果作为上传参数，防止通配符扩展失败
-          BOTTLE_FILES=$(find . -iname '*.bottle.tar.gz')
-          
-          if [ -z "$BOTTLE_FILES" ]; then
-            echo "❌ Error: No bottle files found to upload!"
-            exit 1
-          else
-            echo "✅ Found files to upload: $BOTTLE_FILES"
-            gh release create auto-build $BOTTLE_FILES \
-              --title "Auto Build Artifacts" \
-              --notes "Contains both x265-alpha and ffmpeg-alpha bottles. Built at $(date)" \
-              --repo ${{ github.repository }}
-          fi
+          # === 核心修复 ===
+          # 原来的 *.bottle.tar.gz 匹配不到 ...bottle.3.tar.gz
+          # 改用 *bottle*.tar.gz (中间加个星号) 这里的匹配就万无一失了
+          gh release create auto-build *bottle*.tar.gz \
+            --title "Auto Build Artifacts" \
+            --notes "Contains both x265-alpha and ffmpeg-alpha bottles. Built at $(date)" \
+            --repo ${{ github.repository }}
