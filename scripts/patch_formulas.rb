@@ -1,69 +1,68 @@
-def patch_x265
-  path = "Formula/x265-alpha.rb"
+def process_file(path)
   return unless File.exist?(path)
-  puts "Patching #{path}..."
+  puts "Processing #{path}..."
   
-  content = File.read(path)
-  content.gsub!("class X265 < Formula", "class X265Alpha < Formula")
+  lines = File.readlines(path)
+  new_lines = []
   
-  if content.include?('def install')
-    content.sub!('def install', "keg_only \"x265-alpha is build-only\"\n  def install")
+  lines.each do |line|
+    # =======================================================
+    # 1. 修改 x265: 只要开启 Alpha 即可，做成标准包
+    # =======================================================
+    if path.include?("x265")
+      if line.include?("class X265 < Formula")
+        new_lines << "class X265Alpha < Formula\n"
+        next
+      end
+      
+      # 注意：删掉了 keg_only，让它成为系统标准库
+      
+      if line.strip.start_with?("args = %W[")
+        new_lines << line
+        new_lines << "    -DENABLE_ALPHA=ON\n"
+        # 删掉了 -DENABLE_SHARED=OFF，我们现在要编译动态库(.dylib)
+        new_lines << "    -DENABLE_CLI=OFF\n"
+        next
+      end
+    end
+
+    # =======================================================
+    # 2. 修改 FFmpeg: 标准依赖 x265-alpha
+    # =======================================================
+    if path.include?("ffmpeg")
+      if line.include?("class Ffmpeg < Formula")
+        new_lines << "class FfmpegAlpha < Formula\n"
+        next
+      end
+
+      # 修改依赖：直接依赖，不再是 :build
+      if line.include?('depends_on "x265"')
+        new_lines << line.sub('"x265"', '"x265-alpha"')
+        next
+      end
+
+      # 注入配置：只需要开启开关，不需要那些疯狂的路径指定了
+      if line.strip.start_with?('system "./configure"')
+        puts "  -> Enabling libx265..."
+        new_lines << <<~EOS
+          # === [INJECTED] Enable x265 ===
+          args << "--enable-libx265"
+          # 注意：这里没有了 --static，也没有了 PKG_CONFIG_PATH
+          # Homebrew 会自动处理好动态库链接
+          # === [END INJECTION] ===
+
+        EOS
+        new_lines << line
+        next
+      end
+    end
+
+    new_lines << line
   end
 
-  if content.include?('args = %W[')
-    patch_args = <<~EOS
-      -DENABLE_ALPHA=ON
-          -DENABLE_SHARED=OFF
-          -DENABLE_CLI=OFF
-    EOS
-    unless content.include?("-DENABLE_ALPHA=ON")
-      content.sub!('args = %W[', "args = %W[\n    #{patch_args}")
-    end
-  else
-    puts "Warning: Could not find args block in x265"
-  end
-  
-  File.write(path, content)
+  File.write(path, new_lines.join)
 end
 
-def patch_ffmpeg
-  path = "Formula/ffmpeg-alpha.rb"
-  return unless File.exist?(path)
-  puts "Patching #{path}..."
-  
-  content = File.read(path)
-  content.gsub!("class Ffmpeg < Formula", "class FfmpegAlpha < Formula")
-  content.gsub!('depends_on "x265"', 'depends_on "x265-alpha" => :build')
-  
-  # === 修复重点 ===
-  # 我们现在查找完整的一行： 'system "./configure", *args'
-  # 并用包含这一行完整代码的块去替换它
-  target_line = 'system "./configure", *args'
-  
-  patch_logic = <<~EOS
-    # === [AUTO-PATCH] Static Link Logic ===
-    args << "--enable-libx265"
-    args << "--pkg-config-flags=--static"
-    
-    if Formula["x265-alpha"].any_version_installed?
-      x265_path = Formula["x265-alpha"].opt_prefix
-      args << "--extra-cflags=-I\#{x265_path}/include"
-      args << "--extra-ldflags=-L\#{x265_path}/lib"
-    end
-    # === [END PATCH] ===
-
-    system "./configure", *args
-  EOS
-  
-  if content.include?(target_line) && !content.include?("[AUTO-PATCH]")
-    content.sub!(target_line, patch_logic)
-  else
-    puts "Warning: Could not find exact configure line or patch already applied."
-  end
-  
-  File.write(path, content)
-end
-
-patch_x265
-patch_ffmpeg
-puts "✅ Patches applied successfully."
+process_file("Formula/x265-alpha.rb")
+process_file("Formula/ffmpeg-alpha.rb")
+puts "✅ Standard dynamic linking patches applied."
