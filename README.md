@@ -41,7 +41,9 @@ Run these 3 commands to verify that the installation is working and supports com
 
 ```bash
 # 1. Generate a transparent PNG sequence with a moving pattern
-ffmpeg -f lavfi -i "color=c=black@0.0:size=1280x720:d=2[bg]; testsrc=size=400x400[fg]; [bg][fg]overlay=x=t*300:y=(H-h)/2" -frames:v 60 -c:v png frame_%03d.png
+ffmpeg -f lavfi \
+  -i "color=c=black@0.0:size=1280x720:d=2[bg]; testsrc=size=400x400[fg]; [bg][fg]overlay=x=t*300:y=(H-h)/2" \
+  -frames:v 60 -c:v png frame_%03d.png
 
 # 2. Encode to HEVC video, preserving the transparency
 ffmpeg -framerate 30 -i frame_%03d.png -c:v libx265 -tag:v hvc1 -pix_fmt yuva420p output_alpha.mp4
