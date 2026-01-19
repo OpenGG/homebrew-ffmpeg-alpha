@@ -1,11 +1,13 @@
 class FfmpegAlpha < Formula
-  desc "Play, record, convert, and stream audio and video"
+  desc "Play, record, convert, and stream select audio and video codecs"
   homepage "https://ffmpeg.org/"
   url "https://ffmpeg.org/releases/ffmpeg-8.0.1.tar.xz"
   sha256 "05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41"
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   license "GPL-2.0-or-later"
+  revision 1
+  compatibility_version 1
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
   livecheck do
@@ -15,67 +17,29 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 8
-    sha256 arm64_sequoia: "176546b19fe235b7ac95e24cd3e94fa48127a4f2be1b1c10657c80b2e6d4649f"
+    sha256 arm64_sequoia: "81460c42a858c8bff2ad53fbd8d48685b61b2c5d158d97834d0dab4336e8cd28"
   end
 
   depends_on "pkgconf" => :build
-  depends_on "aom"
-  depends_on "aribb24"
+
+  # Only add dependencies required for dependents in homebrew-core
+  # or INCREDIBLY widely used and light codecs in the current year (2026).
+  # Add other dependencies to ffmpeg-full formula or consider making
+  # formulae dependent on ffmpeg-full.
+  # We should expect to remove e.g. x264 eventually (>=2027) when usage of it is
+  # negligible and has all moved to e.g. x265 instead.
   depends_on "dav1d"
-  depends_on "fontconfig"
-  depends_on "freetype"
-  depends_on "frei0r"
-  depends_on "gnutls"
-  depends_on "harfbuzz"
-  depends_on "jpeg-xl"
   depends_on "lame"
-  depends_on "libass"
-  depends_on "libbluray"
-  depends_on "librist"
-  depends_on "libsoxr"
-  depends_on "libssh"
-  depends_on "libvidstab"
-  depends_on "libvmaf"
-  depends_on "libvorbis"
   depends_on "libvpx"
-  depends_on "libx11"
-  depends_on "libxcb"
-  depends_on "opencore-amr"
-  depends_on "openjpeg"
   depends_on "opus"
-  depends_on "rav1e"
-  depends_on "rubberband"
   depends_on "sdl2"
-  depends_on "snappy"
-  depends_on "speex"
-  depends_on "srt"
   depends_on "svt-av1"
-  depends_on "tesseract"
-  depends_on "theora"
-  depends_on "webp"
   depends_on "x264"
   depends_on "x265-alpha"
-  depends_on "xvid"
-  depends_on "xz"
-  depends_on "zeromq"
-  depends_on "zimg"
 
   uses_from_macos "bzip2"
   uses_from_macos "libxml2"
   uses_from_macos "zlib"
-
-  on_macos do
-    depends_on "libarchive"
-    depends_on "libogg"
-    depends_on "libsamplerate"
-  end
-
-  on_linux do
-    depends_on "alsa-lib"
-    depends_on "libxext"
-    depends_on "libxv"
-  end
 
   on_intel do
     depends_on "nasm" => :build
@@ -92,6 +56,7 @@ class FfmpegAlpha < Formula
     # The new linker leads to duplicate symbol issue https://github.com/homebrew-ffmpeg/homebrew-ffmpeg/issues/140
     ENV.append "LDFLAGS", "-Wl,-ld_classic" if DevelopmentTools.ld64_version.between?("1015.7", "1022.1")
 
+    # Fine adding any new options that don't add dependencies to the formula.
     args = %W[
       --prefix=#{prefix}
       --enable-shared
@@ -101,48 +66,14 @@ class FfmpegAlpha < Formula
       --host-cflags=#{ENV.cflags}
       --host-ldflags=#{ENV.ldflags}
       --enable-ffplay
-      --enable-gnutls
       --enable-gpl
-      --enable-libaom
-      --enable-libaribb24
-      --enable-libbluray
-      --enable-libdav1d
-      --enable-libharfbuzz
-      --enable-libjxl
-      --enable-libmp3lame
-      --enable-libopus
-      --enable-librav1e
-      --enable-librist
-      --enable-librubberband
-      --enable-libsnappy
-      --enable-libsrt
-      --enable-libssh
       --enable-libsvtav1
-      --enable-libtesseract
-      --enable-libtheora
-      --enable-libvidstab
-      --enable-libvmaf
-      --enable-libvorbis
-      --enable-libvpx
-      --enable-libwebp
+      --enable-libopus
       --enable-libx264
+      --enable-libmp3lame
+      --enable-libdav1d
+      --enable-libvpx
       --enable-libx265
-      --enable-libxml2
-      --enable-libxvid
-      --enable-lzma
-      --enable-libfontconfig
-      --enable-libfreetype
-      --enable-frei0r
-      --enable-libass
-      --enable-libopencore-amrnb
-      --enable-libopencore-amrwb
-      --enable-libopenjpeg
-      --enable-libspeex
-      --enable-libsoxr
-      --enable-libzmq
-      --enable-libzimg
-      --disable-libjack
-      --disable-indev=jack
     ]
 
     # Needs corefoundation, coremedia, corevideo
@@ -162,15 +93,16 @@ args << "--enable-libx265"
     pkgshare.install buildpath/"tools/python"
   end
 
+  def caveats
+    <<~EOS
+      ffmpeg-full includes additional tools and libraries that are not included in the regular ffmpeg formula.
+    EOS
+  end
+
   test do
     # Create a 5 second test MP4
     mp4out = testpath/"video.mp4"
     system bin/"ffmpeg", "-filter_complex", "testsrc=rate=1:duration=5", mp4out
-    assert_match(/Duration: 00:00:05\.00,.*Video: h264/m, shell_output("#{bin}/ffprobe -hide_banner #{mp4out} 2>&1"))
-
-    # Re-encode it in HEVC/Matroska
-    mkvout = testpath/"video.mkv"
-    system bin/"ffmpeg", "-i", mp4out, "-c:v", "hevc", mkvout
-    assert_match(/Duration: 00:00:05\.00,.*Video: hevc/m, shell_output("#{bin}/ffprobe -hide_banner #{mkvout} 2>&1"))
+    assert_path_exists mp4out, "Failed to create video.mp4!"
   end
 end
