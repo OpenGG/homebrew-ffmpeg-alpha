@@ -6,7 +6,7 @@ class FfmpegAlpha < Formula
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   license "GPL-2.0-or-later"
-  revision 1
+  revision 2
   compatibility_version 1
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
@@ -17,7 +17,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    sha256 arm64_sequoia: "81460c42a858c8bff2ad53fbd8d48685b61b2c5d158d97834d0dab4336e8cd28"
+    sha256 arm64_sequoia: "98293ad145dd37327302d5853b8fbdac72eafaa85c0f0ae67c76ed339b879c7e"
   end
 
   depends_on "pkgconf" => :build
@@ -41,6 +41,12 @@ class FfmpegAlpha < Formula
   uses_from_macos "libxml2"
   uses_from_macos "zlib"
 
+  on_linux do
+    depends_on "alsa-lib"
+    depends_on "libxcb"
+    depends_on "xz"
+  end
+
   on_intel do
     depends_on "nasm" => :build
   end
@@ -50,6 +56,12 @@ class FfmpegAlpha < Formula
   patch do
     url "https://gitlab.archlinux.org/archlinux/packaging/packages/ffmpeg/-/raw/5670ccd86d3b816f49ebc18cab878125eca2f81f/add-av_stream_get_first_dts-for-chromium.patch"
     sha256 "57e26caced5a1382cb639235f9555fc50e45e7bf8333f7c9ae3d49b3241d3f77"
+  end
+
+  # Add svt-av1 4.x support
+  patch do
+    url "https://git.ffmpeg.org/gitweb/ffmpeg.git/patch/a5d4c398b411a00ac09d8fe3b66117222323844c"
+    sha256 "1dbbc1a4cf9834b3902236abc27fefe982da03a14bcaa89fb90c7c8bd10a1664"
   end
 
   def install
