@@ -6,7 +6,7 @@ class FfmpegAlpha < Formula
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   license "GPL-2.0-or-later"
-  revision 2
+  revision 4
   compatibility_version 1
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
@@ -17,8 +17,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 1
-    sha256 arm64_sequoia: "d974660f7642ee59575eb37cd1d46fccf8126b521afc854793e6ff2207ec7c64"
+    sha256 arm64_sequoia: "5e0569628b40ece390fc4e99e660ddb97348dae6194be22986f45ee0e0c185d1"
   end
 
   depends_on "pkgconf" => :build
@@ -32,6 +31,7 @@ class FfmpegAlpha < Formula
   depends_on "dav1d"
   depends_on "lame"
   depends_on "libvpx"
+  depends_on "openssl@3"
   depends_on "opus"
   depends_on "sdl2"
   depends_on "svt-av1"
@@ -40,12 +40,12 @@ class FfmpegAlpha < Formula
 
   uses_from_macos "bzip2"
   uses_from_macos "libxml2"
-  uses_from_macos "zlib"
 
   on_linux do
     depends_on "alsa-lib"
     depends_on "libxcb"
     depends_on "xz"
+    depends_on "zlib-ng-compat"
   end
 
   on_intel do
@@ -87,6 +87,7 @@ class FfmpegAlpha < Formula
       --enable-libdav1d
       --enable-libvpx
       --enable-libx265
+      --enable-openssl
     ]
 
     # Needs corefoundation, coremedia, corevideo
