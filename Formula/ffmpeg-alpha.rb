@@ -1,13 +1,12 @@
 class FfmpegAlpha < Formula
   desc "Play, record, convert, and stream select audio and video codecs"
   homepage "https://ffmpeg.org/"
-  url "https://ffmpeg.org/releases/ffmpeg-8.0.1.tar.xz"
-  sha256 "05ee0b03119b45c0bdb4df654b96802e909e0a752f72e4fe3794f487229e5a41"
+  url "https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz"
+  sha256 "b072aed6871998cce9b36e7774033105ca29e33632be5b6347f3206898e0756a"
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   license "GPL-2.0-or-later"
-  revision 4
-  compatibility_version 1
+  compatibility_version 2
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
   livecheck do
@@ -17,8 +16,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 3
-    sha256 arm64_sequoia: "44b7c17626b13600e451321a56736f1f02b2fe338980dda2ca72a3bcc6e22480"
+    sha256 arm64_sequoia: "6d59164146f56705fee789c280889cc2bf12a0cfdf296c8428b66342aa09af84"
   end
 
   depends_on "pkgconf" => :build
@@ -51,19 +49,6 @@ class FfmpegAlpha < Formula
 
   on_intel do
     depends_on "nasm" => :build
-  end
-
-  # Fix for QtWebEngine, do not remove
-  # https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=270209
-  patch do
-    url "https://gitlab.archlinux.org/archlinux/packaging/packages/ffmpeg/-/raw/5670ccd86d3b816f49ebc18cab878125eca2f81f/add-av_stream_get_first_dts-for-chromium.patch"
-    sha256 "57e26caced5a1382cb639235f9555fc50e45e7bf8333f7c9ae3d49b3241d3f77"
-  end
-
-  # Add svt-av1 4.x support
-  patch do
-    url "https://git.ffmpeg.org/gitweb/ffmpeg.git/patch/a5d4c398b411a00ac09d8fe3b66117222323844c"
-    sha256 "1dbbc1a4cf9834b3902236abc27fefe982da03a14bcaa89fb90c7c8bd10a1664"
   end
 
   def install
