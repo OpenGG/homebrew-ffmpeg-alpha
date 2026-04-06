@@ -5,7 +5,8 @@ class FfmpegAlpha < Formula
   sha256 "b072aed6871998cce9b36e7774033105ca29e33632be5b6347f3206898e0756a"
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
-  license "GPL-2.0-or-later"
+  # Passing `--enable-version3` changes the license to GPL v3+.
+  license "GPL-3.0-or-later"
   compatibility_version 2
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
@@ -16,20 +17,20 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 1
-    sha256 arm64_sequoia: "6239666acb658a11cd6867a011dc186cdd0169352fbaedc33fe7aa8502a0a4b7"
+    rebuild 2
+    sha256 arm64_sequoia: "9aee75fae49ae788840d77fd7eb755bd1291628b10e19d79fc54b550af111a3f"
   end
 
   depends_on "pkgconf" => :build
 
   # Only add dependencies required for dependents in homebrew-core
   # or INCREDIBLY widely used and light codecs in the current year (2026).
-  # Add other dependencies to ffmpeg-full formula or consider making
-  # formulae dependent on ffmpeg-full.
+  # Add other dependencies to ffmpeg-full formula.
   # We should expect to remove e.g. x264 eventually (>=2027) when usage of it is
   # negligible and has all moved to e.g. x265 instead.
   depends_on "dav1d"
   depends_on "lame"
+  depends_on "libvmaf" # dependent: ab-av1
   depends_on "libvpx"
   depends_on "openssl@3"
   depends_on "opus"
@@ -72,6 +73,7 @@ class FfmpegAlpha < Formula
       --enable-libx264
       --enable-libmp3lame
       --enable-libdav1d
+      --enable-libvmaf
       --enable-libvpx
       --enable-libx265
       --enable-openssl
