@@ -7,6 +7,7 @@ class FfmpegAlpha < Formula
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   # Passing `--enable-version3` changes the license to GPL v3+.
   license "GPL-3.0-or-later"
+  revision 1
   compatibility_version 2
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
@@ -17,8 +18,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 4
-    sha256 arm64_sequoia: "79e0d7a2b9bc05c8f43c6aab36053de328f811153bebffcfd0a46de6c4052a36"
+    sha256 arm64_sequoia: "b994028d4d5f05bba883ca23be6b091eee4fb6549a0ab83b4e62e42508ecd544"
   end
 
   depends_on "pkgconf" => :build

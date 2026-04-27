@@ -1,31 +1,21 @@
 class X265Alpha < Formula
   desc "H.265/HEVC encoder"
   homepage "https://bitbucket.org/multicoreware/x265_git"
-  url "https://bitbucket.org/multicoreware/x265_git/downloads/x265_4.1.tar.gz"
-  sha256 "a31699c6a89806b74b0151e5e6a7df65de4b49050482fe5ebf8a4379d7af8f29"
+  url "https://bitbucket.org/multicoreware/x265_git/downloads/x265_4.2.tar.gz"
+  sha256 "40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210"
   license "GPL-2.0-or-later"
+  compatibility_version 1
   head "https://bitbucket.org/multicoreware/x265_git.git", branch: "master"
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 20
-    sha256 cellar: :any, arm64_sequoia: "42a8bd4d9bbc81d4e8e05df2ef6133778221935398e5c30fccad32c4b1689956"
+    sha256 cellar: :any, arm64_sequoia: "4bf85cc6ef0633fda5c531b8a80e25e171a8778813067f3572d53a836c5ad05e"
   end
 
   depends_on "cmake" => :build
 
   on_intel do
     depends_on "nasm" => :build
-  end
-
-  # cmake 4 workaround, remove in next release
-  patch do
-    url "https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/b354c009a60bcd6d7fc04014e200a1ee9c45c167"
-    sha256 "f7d3ce261c4b0cd461b55ad00de38ffa6a7cc2fa13ae6f034b3e46d8bb3cb6a8"
-  end
-  patch do
-    url "https://api.bitbucket.org/2.0/repositories/multicoreware/x265_git/diff/51ae8e922bcc4586ad4710812072289af91492a8"
-    sha256 "56c78f60cbaac61a44cb6e9889ece3380f9b60d32a4b704e274d9a636a16379d"
   end
 
   def install
@@ -44,13 +34,11 @@ class X265Alpha < Formula
       -DCMAKE_INSTALL_RPATH=#{rpath}
     ]
     args << "-DENABLE_SVE2=OFF" if OS.linux? && Hardware::CPU.arm?
-    args << "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" # FIXME: Workaround for CMake 4.
     high_bit_depth_args = %w[
       -DHIGH_BIT_DEPTH=ON -DEXPORT_C_API=OFF
       -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
     ]
     high_bit_depth_args << "-DENABLE_SVE2=OFF" if OS.linux? && Hardware::CPU.arm?
-    high_bit_depth_args << "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" # FIXME: Workaround for CMake 4.
 
     (buildpath/"8bit").mkpath
     system "cmake", "-S", buildpath/"source", "-B", "10bit",
