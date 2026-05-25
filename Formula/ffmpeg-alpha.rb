@@ -17,8 +17,8 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 1
-    sha256 arm64_sequoia: "2e11b3fb75262bf19171c53c9f859d7021ae566f578d208a5fa1247ac870be1f"
+    rebuild 2
+    sha256 arm64_sequoia: "79f0d64e8498a07132981dc05017435dd1466f08387f2eb7930320b76e8758f5"
   end
 
   depends_on "pkgconf" => :build
