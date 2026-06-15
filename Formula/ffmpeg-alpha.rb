@@ -17,8 +17,8 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 4
-    sha256 arm64_sequoia: "f4febdec17677b167a8cb10180e335e6761005b88b7fde8a2ee1241546ab64c1"
+    rebuild 5
+    sha256 arm64_sequoia: "c29a2a03167c34955e6286a094daea45b4991660c9d3e4d04e5ae71b283ff4ee"
   end
 
   depends_on "pkgconf" => :build
@@ -52,6 +52,8 @@ class FfmpegAlpha < Formula
   on_intel do
     depends_on "nasm" => :build
   end
+
+  deny_network_access!
 
   def install
     # The new linker leads to duplicate symbol issue https://github.com/homebrew-ffmpeg/homebrew-ffmpeg/issues/140

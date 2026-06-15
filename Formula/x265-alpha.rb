@@ -9,8 +9,8 @@ class X265Alpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 6
-    sha256 cellar: :any, arm64_sequoia: "fe23622fe6ce52e22e0e16d59441ca9bb5c84585a064baed684946cce4a2a743"
+    rebuild 7
+    sha256 cellar: :any, arm64_sequoia: "0c369279ebda4f094504b4ef9b2b708c7eb6cd0770d8ae46c544caead0c48213"
   end
 
   depends_on "cmake" => :build
