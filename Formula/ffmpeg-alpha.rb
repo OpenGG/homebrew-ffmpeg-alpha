@@ -1,8 +1,8 @@
 class FfmpegAlpha < Formula
   desc "Play, record, convert, and stream select audio and video codecs"
   homepage "https://ffmpeg.org/"
-  url "https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz"
-  sha256 "b6863adde98898f42602017462871b5f6333e65aec803fdd7a6308639c52edf3"
+  url "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz"
+  sha256 "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c"
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   # Passing `--enable-version3` changes the license to GPL v3+.
@@ -17,8 +17,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 5
-    sha256 arm64_sequoia: "c29a2a03167c34955e6286a094daea45b4991660c9d3e4d04e5ae71b283ff4ee"
+    sha256 arm64_sequoia: "f1f4eac484c2ce9a55a6b2b46baecab6890d2e6e35884fc8deb606adead08030"
   end
 
   depends_on "pkgconf" => :build
@@ -34,7 +33,7 @@ class FfmpegAlpha < Formula
   depends_on "libvpx"
   depends_on "openssl@3"
   depends_on "opus"
-  depends_on "sdl2"
+  depends_on "sdl2-compat"
   depends_on "svt-av1"
   depends_on "x264"
   depends_on "x265-alpha"
