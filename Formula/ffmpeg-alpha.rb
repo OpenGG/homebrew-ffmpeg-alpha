@@ -1,14 +1,13 @@
 class FfmpegAlpha < Formula
   desc "Play, record, convert, and stream select audio and video codecs"
   homepage "https://ffmpeg.org/"
-  url "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz"
-  sha256 "464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c"
+  url "https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz"
+  sha256 "cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635"
   # None of these parts are used by default, you have to explicitly pass `--enable-gpl`
   # to configure to activate them. In this case, FFmpeg's license changes to GPL v2+.
   # Passing `--enable-version3` changes the license to GPL v3+.
   license "GPL-3.0-or-later"
-  revision 1
-  compatibility_version 2
+  compatibility_version 3
   head "https://github.com/FFmpeg/FFmpeg.git", branch: "master"
 
   livecheck do
@@ -18,8 +17,7 @@ class FfmpegAlpha < Formula
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 5
-    sha256 arm64_tahoe: "d43486759bcd014736231e56df88ad339238086204713ae196751edfa54205b0"
+    sha256 arm64_tahoe: "06b931d3a2ec98cdb5caa85a4d3d7e25251f96119d899bb913f06d8546d74874"
   end
 
   depends_on "pkgconf" => :build
@@ -39,6 +37,7 @@ class FfmpegAlpha < Formula
   depends_on "svt-av1"
   depends_on "x264"
   depends_on "x265-alpha"
+  depends_on "xz"
 
   uses_from_macos "bzip2"
   uses_from_macos "libxml2"
@@ -46,7 +45,6 @@ class FfmpegAlpha < Formula
   on_linux do
     depends_on "alsa-lib"
     depends_on "libxcb"
-    depends_on "xz"
     depends_on "zlib-ng-compat"
   end
 
