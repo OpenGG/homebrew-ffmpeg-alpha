@@ -1,16 +1,15 @@
 class X265Alpha < Formula
   desc "H.265/HEVC encoder"
-  homepage "https://bitbucket.org/multicoreware/x265_git"
-  url "https://bitbucket.org/multicoreware/x265_git/downloads/x265_4.2.tar.gz"
-  sha256 "40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210"
+  homepage "https://github.com/Multicorewareinc/x265"
+  url "https://github.com/Multicorewareinc/x265/releases/download/4.3/x265_4.3.tar.gz"
+  sha256 "83c53e4c8bbb8f1e33ed59e10a7d621d1d7801ca853910c3eb41f038b8ffb121"
   license "GPL-2.0-or-later"
-  compatibility_version 1
-  head "https://bitbucket.org/multicoreware/x265_git.git", branch: "master"
+  compatibility_version 2
+  head "https://github.com/Multicorewareinc/x265.git", branch: "master"
 
   bottle do
     root_url "https://github.com/OpenGG/homebrew-ffmpeg-alpha/releases/download/auto-build"
-    rebuild 17
-    sha256 cellar: :any, arm64_tahoe: "44659626a896324d32e52bc91799b1c8da33d62801e84d28687423bb114c6b52"
+    sha256 cellar: :any, arm64_tahoe: "880c0d8c504a99c7ddfbe31144d734ead599c32f91fa75bde1e012bf90833ad6"
   end
 
   depends_on "cmake" => :build
